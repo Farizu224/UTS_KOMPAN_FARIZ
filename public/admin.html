@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Monitoring - Tinder (Trash Finder)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  </head>
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+      <div class="container">
+        <a class="navbar-brand" href="/">Tinder (Trash Finder)</a>
+        <div class="navbar-nav">
+          <a class="nav-link" href="/report">Lapor Sampah</a>
+          <a class="nav-link" href="/schedule">Jadwal Angkut</a>
+          <a class="nav-link active" href="/admin">Admin Monitoring</a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container py-4">
+      <h1 class="h4 mb-3">Dashboard Monitoring</h1>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h2 class="h6 text-muted">Jumlah Laporan</h2>
+              <p class="display-6 mb-0" id="report-count">0</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <h2 class="h6 text-muted">Jumlah Petugas</h2>
+              <p class="display-6 mb-0" id="worker-count">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="h5">Status Petugas Kebersihan</h2>
+          <div class="table-responsive">
+            <table class="table table-bordered align-middle">
+              <thead>
+                <tr>
+                  <th>Nama</th>
+                  <th>Area</th>
+                  <th>Status</th>
+                  <th>Terakhir Aktif</th>
+                </tr>
+              </thead>
+              <tbody id="worker-body">
+                <tr>
+                  <td colspan="4" class="text-center text-muted">Memuat data...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h2 class="h5">Daftar Laporan</h2>
+          <div class="table-responsive">
+            <table class="table table-striped align-middle">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Lokasi</th>
+                  <th>Deskripsi</th>
+                  <th>Status</th>
+                  <th>Foto</th>
+                  <th>Waktu</th>
+                </tr>
+              </thead>
+              <tbody id="report-body">
+                <tr>
+                  <td colspan="6" class="text-center text-muted">Memuat data...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const reportCountEl = document.getElementById("report-count");
+      const workerCountEl = document.getElementById("worker-count");
+      const workerBody = document.getElementById("worker-body");
+      const reportBody = document.getElementById("report-body");
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      async function loadAdminData() {
+        try {
+          const response = await fetch("/api/admin");
+          if (!response.ok) {
+            throw new Error("Gagal memuat data admin");
+          }
+
+          const data = await response.json();
+          const workers = Array.isArray(data.workers) ? data.workers : [];
+          const reports = Array.isArray(data.reports) ? data.reports : [];
+
+          reportCountEl.textContent = String(reports.length);
+          workerCountEl.textContent = String(workers.length);
+
+          if (workers.length === 0) {
+            workerBody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Belum ada data petugas.</td></tr>';
+          } else {
+            workerBody.innerHTML = workers
+              .map((worker) => {
+                const area = worker.assigned_area || "-";
+                const lastActive = worker.last_active_at || "-";
+                return `
+                  <tr>
+                    <td>${escapeHtml(worker.worker_name)}</td>
+                    <td>${escapeHtml(area)}</td>
+                    <td><span class="badge text-bg-secondary">${escapeHtml(worker.status)}</span></td>
+                    <td>${escapeHtml(lastActive)}</td>
+                  </tr>
+                `;
+              })
+              .join("");
+          }
+
+          if (reports.length === 0) {
+            reportBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Belum ada laporan.</td></tr>';
+          } else {
+            reportBody.innerHTML = reports
+              .map((report) => {
+                const safePhotoUrl = encodeURI(String(report.photo_url || "#"));
+                return `
+                  <tr>
+                    <td>${escapeHtml(report.id)}</td>
+                    <td>${escapeHtml(report.location)}</td>
+                    <td>${escapeHtml(report.description)}</td>
+                    <td><span class="badge text-bg-warning">${escapeHtml(report.status)}</span></td>
+                    <td><a href="${safePhotoUrl}" target="_blank" rel="noopener noreferrer">Lihat</a></td>
+                    <td>${escapeHtml(report.created_at)}</td>
+                  </tr>
+                `;
+              })
+              .join("");
+          }
+        } catch (_error) {
+          workerBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Gagal memuat data petugas.</td></tr>';
+          reportBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Gagal memuat data laporan.</td></tr>';
+        }
+      }
+
+      loadAdminData();
+    </script>
+  </body>
+</html>
