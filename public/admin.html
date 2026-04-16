@@ -21,6 +21,43 @@
     <main class="container py-4">
       <h1 class="h4 mb-3">Dashboard Monitoring</h1>
 
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <h2 class="h5">Tambah Jadwal Pengangkutan</h2>
+          <div id="schedule-alert"></div>
+          <form id="schedule-form" class="row g-2">
+            <div class="col-md-4">
+              <label for="area_name" class="form-label">Area</label>
+              <input type="text" id="area_name" class="form-control" placeholder="Contoh: Kecamatan D" required />
+            </div>
+            <div class="col-md-3">
+              <label for="day_of_week" class="form-label">Hari</label>
+              <select id="day_of_week" class="form-select" required>
+                <option value="">Pilih hari</option>
+                <option>Monday</option>
+                <option>Tuesday</option>
+                <option>Wednesday</option>
+                <option>Thursday</option>
+                <option>Friday</option>
+                <option>Saturday</option>
+                <option>Sunday</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label for="pickup_time" class="form-label">Jam</label>
+              <input type="time" id="pickup_time" class="form-control" required />
+            </div>
+            <div class="col-md-3">
+              <label for="schedule_notes" class="form-label">Catatan</label>
+              <input type="text" id="schedule_notes" class="form-control" placeholder="Opsional" />
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-success">Simpan Jadwal</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div class="row g-3 mb-3">
         <div class="col-md-6">
           <div class="card shadow-sm h-100">
@@ -94,6 +131,8 @@
       const workerCountEl = document.getElementById("worker-count");
       const workerBody = document.getElementById("worker-body");
       const reportBody = document.getElementById("report-body");
+      const scheduleForm = document.getElementById("schedule-form");
+      const scheduleAlert = document.getElementById("schedule-alert");
 
       function escapeHtml(value) {
         return String(value)
@@ -162,7 +201,41 @@
         }
       }
 
+      async function createSchedule(event) {
+        event.preventDefault();
+
+        scheduleAlert.innerHTML = "";
+
+        const payload = {
+          area_name: document.getElementById("area_name").value.trim(),
+          day_of_week: document.getElementById("day_of_week").value,
+          pickup_time: document.getElementById("pickup_time").value,
+          notes: document.getElementById("schedule_notes").value.trim()
+        };
+
+        try {
+          const response = await fetch("/api/schedule", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.message || "Gagal menambahkan jadwal.");
+          }
+
+          scheduleAlert.innerHTML = '<div class="alert alert-success py-2">Jadwal berhasil ditambahkan.</div>';
+          scheduleForm.reset();
+        } catch (error) {
+          scheduleAlert.innerHTML = `<div class="alert alert-danger py-2">${escapeHtml(error.message)}</div>`;
+        }
+      }
+
       loadAdminData();
+      scheduleForm.addEventListener("submit", createSchedule);
     </script>
   </body>
 </html>

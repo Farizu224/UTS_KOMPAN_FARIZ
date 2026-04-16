@@ -59,11 +59,11 @@ app.use(
       useDefaults: true,
       directives: {
         "default-src": ["'self'"],
-        "script-src": ["'self'", "'unsafe-inline'"],
-        "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
-        "img-src": ["'self'", "data:", "https:"],
-        "connect-src": ["'self'", "https://cdn.jsdelivr.net"],
-        "font-src": ["'self'", "data:", "https://cdn.jsdelivr.net"],
+        "script-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://unpkg.com"],
+        "img-src": ["'self'", "data:", "https:", "https://tile.openstreetmap.org"],
+        "connect-src": ["'self'", "https://cdn.jsdelivr.net", "https://unpkg.com", "https://tile.openstreetmap.org"],
+        "font-src": ["'self'", "data:", "https://cdn.jsdelivr.net", "https://unpkg.com"],
         "upgrade-insecure-requests": null
       }
     }
@@ -95,10 +95,17 @@ app.post("/report", upload.single("photo"), async (req, res, next) => {
   try {
     const location = (req.body.location || "").trim();
     const description = (req.body.description || "").trim();
+    const latitude = (req.body.latitude || "").trim();
+    const longitude = (req.body.longitude || "").trim();
     const file = req.file;
 
     if (!location || !description || !file) {
       return res.redirect("/report?error=Semua%20field%20wajib%20diisi");
+    }
+
+    let locationWithCoordinates = location;
+    if (latitude && longitude) {
+      locationWithCoordinates = `${location} (Lat: ${latitude}, Lng: ${longitude})`;
     }
 
     const safeOriginalName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -121,7 +128,7 @@ app.post("/report", upload.single("photo"), async (req, res, next) => {
       INSERT INTO waste_reports (location, description, photo_url, s3_key, status, created_at)
       VALUES (?, ?, ?, ?, 'NEW', NOW())
       `,
-      [location, description, photoUrl, objectKey]
+      [locationWithCoordinates, description, photoUrl, objectKey]
     );
 
     return res.redirect("/report?success=1");
@@ -145,6 +152,42 @@ app.get("/api/schedule", async (_req, res, next) => {
     );
 
     return res.status(200).json(rows);
+  } catch (err) {
+    return next(err);
+  }
+});
+
+app.post("/api/schedule", async (req, res, next) => {
+  try {
+    const areaName = (req.body.area_name || "").trim();
+    const dayOfWeek = (req.body.day_of_week || "").trim();
+    const pickupTime = (req.body.pickup_time || "").trim();
+    const notes = (req.body.notes || "").trim();
+
+    const allowedDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+    if (!areaName || !dayOfWeek || !pickupTime) {
+      return res.status(400).json({ message: "area_name, day_of_week, dan pickup_time wajib diisi." });
+    }
+
+    if (!allowedDays.includes(dayOfWeek)) {
+      return res.status(400).json({ message: "day_of_week tidak valid." });
+    }
+
+    if (!timeRegex.test(pickupTime)) {
+      return res.status(400).json({ message: "pickup_time harus format HH:MM (24 jam)." });
+    }
+
+    await dbPool.execute(
+      `
+      INSERT INTO collection_schedules (area_name, day_of_week, pickup_time, notes, created_at, updated_at)
+      VALUES (?, ?, ?, ?, NOW(), NOW())
+      `,
+      [areaName, dayOfWeek, `${pickupTime}:00`, notes || null]
+    );
+
+    return res.status(201).json({ message: "Jadwal berhasil ditambahkan." });
   } catch (err) {
     return next(err);
   }
