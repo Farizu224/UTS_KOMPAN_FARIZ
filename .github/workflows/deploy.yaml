@@ -80,6 +80,7 @@ jobs:
             # Jalankan container baru dengan Environment Variables dari GitHub Secrets
             docker run -d \
               --name tinder-running \
+              --restart unless-stopped \
               -p 80:3000 \
               -e NODE_ENV=production \
               -e PORT=3000 \

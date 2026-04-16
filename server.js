@@ -55,6 +55,9 @@ const upload = multer({
 
 app.use(
   helmet({
+    referrerPolicy: {
+      policy: "strict-origin-when-cross-origin"
+    },
     contentSecurityPolicy: {
       useDefaults: true,
       directives: {
