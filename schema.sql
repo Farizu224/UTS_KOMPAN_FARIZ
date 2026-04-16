@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS tinder_trash_finder;
-USE tinder_trash_finder;
+CREATE DATABASE IF NOT EXISTS tinder_db;
+USE tinder_db;
 
 CREATE TABLE IF NOT EXISTS waste_reports (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
