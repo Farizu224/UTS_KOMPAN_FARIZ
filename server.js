@@ -53,7 +53,16 @@ const upload = multer({
   limits: { fileSize: Number(process.env.MAX_UPLOAD_SIZE || 5 * 1024 * 1024) }
 });
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "upgrade-insecure-requests": null
+      }
+    }
+  })
+);
 app.use(morgan("combined"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
