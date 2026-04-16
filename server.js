@@ -58,6 +58,12 @@ app.use(
     contentSecurityPolicy: {
       useDefaults: true,
       directives: {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+        "img-src": ["'self'", "data:", "https:"],
+        "connect-src": ["'self'", "https://cdn.jsdelivr.net"],
+        "font-src": ["'self'", "data:", "https://cdn.jsdelivr.net"],
         "upgrade-insecure-requests": null
       }
     }
